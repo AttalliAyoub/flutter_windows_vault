@@ -9,7 +9,7 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key key}) : super(key: key);
+  const MyApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -48,41 +48,42 @@ class _PageState extends State<Page> {
   }
 
   _showDialog({
-    @required String title,
-    @required dynamic value,
+    required String title,
+    required dynamic value,
     List<dynamic> values: const <dynamic>[],
     bool error = false,
   }) {
     showDialog(
-      context: context,
-      child: SimpleDialog(
-        title: Text('$title ${error ? 'error : ' : 'done : '}'),
-        contentPadding: EdgeInsets.all(20),
-        children: [
-          IconButton(
-            icon: Icon(
-              error ? Icons.error : Icons.done,
-              color: Colors.red,
-            ),
-            onPressed: Navigator.of(context).pop,
-          ),
-          if (value != null)
-            SelectableText(
-              '${error ? value : jsonEncoder.convert(value)}',
-            ),
-          for (dynamic v in values)
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 5, vertical: 10),
-              margin: EdgeInsets.only(top: 20),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.red, width: 2),
-                borderRadius: BorderRadius.circular(5),
+        context: context,
+        builder: (context) {
+          return SimpleDialog(
+            title: Text('$title ${error ? 'error : ' : 'done : '}'),
+            contentPadding: EdgeInsets.all(20),
+            children: [
+              IconButton(
+                icon: Icon(
+                  error ? Icons.error : Icons.done,
+                  color: Colors.red,
+                ),
+                onPressed: Navigator.of(context).pop,
               ),
-              child: Text('${jsonEncoder.convert(v)}'),
-            ),
-        ],
-      ),
-    );
+              if (value != null)
+                SelectableText(
+                  '${error ? value : jsonEncoder.convert(value)}',
+                ),
+              for (dynamic v in values)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 5, vertical: 10),
+                  margin: EdgeInsets.only(top: 20),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.red, width: 2),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: Text('${jsonEncoder.convert(v)}'),
+                ),
+            ],
+          );
+        });
   }
 
   void set() {
@@ -94,7 +95,14 @@ class _PageState extends State<Page> {
 
   void get() {
     FlutterWindowsVault.get(key: 'password')
-        .then((v) => _showDialog(title: 'get', value: v.toJson))
+        .then((v) => _showDialog(title: 'get', value: v?.toJson))
+        .catchError(
+            (err) => _showDialog(title: 'get', error: true, value: err));
+  }
+
+  void containsKey() {
+    FlutterWindowsVault.containsKey(key: 'password')
+        .then((v) => _showDialog(title: 'get', value: v))
         .catchError(
             (err) => _showDialog(title: 'get', error: true, value: err));
   }
@@ -111,7 +119,7 @@ class _PageState extends State<Page> {
         .then((v) => _showDialog(
               title: 'list',
               value: null,
-              values: v?.map((e) => e?.toJson)?.toList() ?? [],
+              values: v.map((e) => e.toJson).toList(),
             ))
         .catchError(
             (err) => _showDialog(title: 'list', error: true, value: err));
@@ -179,6 +187,17 @@ class _PageState extends State<Page> {
                         borderRadius: BorderRadius.circular(10)),
                     child: Text('Get'),
                     onPressed: get,
+                  ),
+                  SizedBox(height: 20),
+                  FlatButton(
+                    minWidth: 504,
+                    height: 60,
+                    color: Theme.of(context).primaryColor,
+                    textColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    child: Text('Contains Key'),
+                    onPressed: containsKey,
                   ),
                   SizedBox(height: 20),
                   FlatButton(

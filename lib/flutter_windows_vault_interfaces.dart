@@ -74,16 +74,22 @@ class Cred {
   Type type;
 
   /// A CREDENTIALS constructor
-  Cred({this.userName, this.value, this.key, this.persist, this.type});
+  Cred({
+    required this.userName,
+    required this.value,
+    required this.key,
+    required this.persist,
+    required this.type,
+  });
 
   // constructe CREDENTIALS from json (Map) data;
   factory Cred.fromJson(Map<String, dynamic> data) {
     return Cred(
-      userName: data['userName'],
-      value: data['value'],
+      userName: data['userName'] ?? '',
+      value: data['value'] ?? '',
       key: data['key'],
       persist: Persist.values[data['persist'] - 1],
-      type: Type.values[data['type'] - 1],
+      type: Type.values[(data['type'] ?? 1) - 1],
     );
   }
 
@@ -93,8 +99,8 @@ class Cred {
       'userName': userName,
       'value': value,
       'key': key,
-      'persist': persist?.toString()?.replaceAll("Persist.", ""),
-      'type': type?.toString()?.replaceAll("Type.", ""),
+      'persist': persist.toString().replaceAll("Persist.", ""),
+      'type': type.toString().replaceAll("Type.", ""),
     };
   }
 }

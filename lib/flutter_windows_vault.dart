@@ -67,21 +67,22 @@ class FlutterWindowsVault {
   /// ```
   /// you could find more https://docs.microsoft.com/en-us/windows/win32/api/wincred/ns-wincred-credentiala#members
   static Future<bool> set({
-    @required String key,
-    @required String value,
+    required String key,
+    required String value,
     Type type = Type.CRED_TYPE_GENERIC,
     Persist persist = Persist.CRED_PERSIST_LOCAL_MACHINE,
     String userName = 'com.ayoub.flutter_windows_vault',
     bool encrypted = false,
     bool fAsSelf = false,
   }) {
-    assert(key?.isNotEmpty ?? false);
-    assert(value?.isNotEmpty ?? false);
-    assert(userName?.isNotEmpty ?? false);
-    assert(type != null);
-    assert(persist != null);
-    assert(encrypted != null);
-    assert(!encrypted || (encrypted && fAsSelf != null));
+    assert(key.isNotEmpty);
+    assert(value.isNotEmpty);
+    assert(userName.isNotEmpty);
+    // assert(type != null);
+    // assert(persist != null);
+    // assert(encrypted != null);
+    // assert(!encrypted || (encrypted && fAsSelf != null));
+    assert(!fAsSelf || (fAsSelf && encrypted));
     return _channel.invokeMethod<bool>('set', {
       'key': key,
       'value': value,
@@ -90,7 +91,7 @@ class FlutterWindowsVault {
       'userName': userName,
       'encrypted': encrypted,
       'fAsSelf': fAsSelf,
-    });
+    }).then((value) => value ?? false);
   }
 
   /// The get (uses CredReadW from wincred.h) function reads a credential from the user's credential set.
@@ -118,22 +119,58 @@ class FlutterWindowsVault {
   /// );
   /// ```
   ///
-  static Future<Cred> get({
-    @required String key,
+  static Future<Cred?> get({
+    required String key,
     Type type = Type.CRED_TYPE_GENERIC,
     bool encrypted = false,
     bool fAsSelf = false,
-  }) {
-    assert(key?.isNotEmpty ?? false);
-    assert(type != null);
-    assert(encrypted != null);
-    assert(!encrypted || (encrypted && fAsSelf != null));
-    return _channel.invokeMapMethod<String, dynamic>('get', {
-      'key': key,
-      'type': type.index + 1,
-      'encrypted': encrypted,
-      'fAsSelf': fAsSelf,
-    }).then((data) => Cred.fromJson(data));
+  }) async {
+    assert(key.isNotEmpty);
+    // assert(type != null);
+    // assert(encrypted != null);
+    // assert(!encrypted || (encrypted && fAsSelf != null));
+    assert(!fAsSelf || (fAsSelf && encrypted));
+
+    try {
+      return await _channel.invokeMapMethod<String, dynamic>('get', {
+        'key': key,
+        'type': type.index + 1,
+        'encrypted': encrypted,
+        'fAsSelf': fAsSelf,
+      }).then((data) {
+        if (data == null) return null;
+        return Cred.fromJson(data);
+      });
+    } catch (err) {
+      if (err is PlatformException && err.code != 'ERROR_NOT_FOUND') throw err;
+      return Future<Cred>.value(null);
+    }
+  }
+
+  static Future<bool> containsKey({
+    required String key,
+    Type type = Type.CRED_TYPE_GENERIC,
+    bool encrypted = false,
+    bool fAsSelf = false,
+  }) async {
+    assert(key.isNotEmpty);
+    assert(!fAsSelf || (fAsSelf && encrypted));
+    try {
+      return await _channel.invokeMapMethod<String, dynamic>('get', {
+        'key': key,
+        'type': type.index + 1,
+        'encrypted': encrypted,
+        'fAsSelf': fAsSelf,
+      }).then((data) {
+        if (data == null) return false;
+        return true;
+      });
+    } catch (err) {
+      if (err is PlatformException && err.code != 'ERROR_NOT_FOUND')
+        throw err;
+      else
+        return false;
+    }
   }
 
   ///The del function (user CredDeleteW from wincred.h) deletes a credential from the user's credential set.
@@ -155,15 +192,15 @@ class FlutterWindowsVault {
   ///```
   ///
   static Future<bool> del({
-    @required String key,
+    required String key,
     Type type = Type.CRED_TYPE_GENERIC,
   }) {
-    assert(key?.isNotEmpty ?? false);
-    assert(type != null);
+    assert(key.isNotEmpty);
+    // assert(type != null);
     return _channel.invokeMethod<bool>('del', {
       'key': key,
       'type': type.index + 1,
-    });
+    }).then((value) => value ?? false);
   }
 
   /// The list function (uses CredEnumerateW from wincred.h) enumerates the credentials from the user's credential set.
@@ -178,13 +215,15 @@ class FlutterWindowsVault {
   ///FlutterWindowsVault.list(filter: '*');
   ///```
   ///
-  static Future<List<Cred>> list({String filter}) {
-    return _channel
-        .invokeListMethod('list', {'filter': list}).then<List<Cred>>((values) {
+  static Future<List<Cred>> list({String? filter}) {
+    return _channel.invokeListMethod(
+        'list', {'filter': filter}).then<List<Cred>>((values) {
       // print(values);
-      return List<Map>.from(values ?? []).map<Cred>((cred) {
-        if (cred == null) return null;
-        return Cred.fromJson(Map<String, dynamic>.from(cred));
+      return List.from(values ?? [])
+          .where((e) => e is Map)
+          .map((e) => Map<String, dynamic>.from(e))
+          .map<Cred>((cred) {
+        return Cred.fromJson(cred);
       }).toList();
     });
   }
@@ -204,13 +243,13 @@ class FlutterWindowsVault {
   ///```
   ///
   static Future<String> encrypt({
-    @required String value,
+    required String value,
     bool fAsSelf = false,
   }) {
-    assert(value?.isNotEmpty ?? false);
-    assert(fAsSelf != null);
-    return _channel
-        .invokeMethod<String>('encrypt', {'value': value, 'fAsSelf': fAsSelf});
+    assert(value.isNotEmpty);
+    // assert(fAsSelf != null);
+    return _channel.invokeMethod<String>('encrypt',
+        {'value': value, 'fAsSelf': fAsSelf}).then((value) => value!);
   }
 
   /// The CredUnprotect function (uses CredUnprotectW from wincred.h) decrypts credentials that were previously encrypted by using the CredProtect function.
@@ -229,12 +268,12 @@ class FlutterWindowsVault {
   ///```
   ///
   static Future<String> decrypt({
-    @required String value,
+    required String value,
     bool fAsSelf = false,
   }) {
-    assert(value?.isNotEmpty ?? false);
-    assert(fAsSelf != null);
-    return _channel
-        .invokeMethod<String>('decrypte', {'value': value, 'fAsSelf': fAsSelf});
+    assert(value.isNotEmpty);
+    // assert(fAsSelf != null);
+    return _channel.invokeMethod<String>('decrypte',
+        {'value': value, 'fAsSelf': fAsSelf}).then((value) => value!);
   }
 }
