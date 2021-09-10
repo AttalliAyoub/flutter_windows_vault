@@ -1,6 +1,6 @@
 name: flutter_windows_vault
 description: flutter Windows to read/write data into credential manager (windows vault), with encryption.
-version: 1.0.0
+version: 1.0.1
 author: Attalli Ayoub <attalliayoub50@gmail.com>
 homepage: https://github.com/AttalliAyoub/flutter_windows_vault
 
